@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Plantomatic</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f1f3f6; color: #333; padding: 12px; }
+        .main-container { max-width: 480px; margin: 0 auto; }
+        .dashboard-title { font-size: 18px; margin: 10px 0 12px 5px; color: #1c1c1e; }
+        
+        /* En-tête à 3 colonnes sur une seule ligne */
+        .header-status { display: grid; grid-template-columns: 1.2fr 1.2fr 0.6fr; gap: 8px; margin-bottom: 15px; align-items: stretch; }
+        .mini-card { background: white; padding: 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 12px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; }
+        .mini-card p { color: #666; font-size: 10px; margin-bottom: 2px; text-transform: uppercase; }
+        .status-val { font-size: 13px; font-weight: bold; }
+        
+        /* Petit bouton rafraîchir */
+        .btn-refresh { background-color: #e5e5ea; color: #007ff7; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); -webkit-tap-highlight-color: transparent; }
+        .btn-refresh:active { background-color: #d1d1d6; }
+        
+        /* Bouton d'action Arrosage */
+        .action-section { margin-bottom: 20px; }
+        .btn-water { background-color: #007aff; color: white; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 10px; width: 100%; cursor: pointer; box-shadow: 0 4px 8px rgba(0,122,255,0.2); -webkit-tap-highlight-color: transparent; }
+        .btn-water:active { background-color: #0056b3; transform: scale(0.98); }
+        .btn-water:disabled { background-color: #aeaeae; box-shadow: none; cursor: not-allowed; }
+        
+        /* Section Logs */
+        .logs-section { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .logs-title { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
+        .logs-container { background-color: #1e1e1e; border-radius: 6px; padding: 12px; max-height: 220px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.5; }
+        
+        .log-line { padding: 3px 0; border-bottom: 1px solid #2d2d2d; color: #d4d4d4; }
+        .log-check { color: #888888; }
+        .log-manuel { color: #4fc1ff; font-weight: bold; }
+        .log-auto { color: #9cdcfe; font-weight: bold; }
+        .log-alerte { color: #ff453a; font-weight: bold; background-color: rgba(255,69,58,0.1); }
+        
+        .text-ok { color: #24b147; }
+        .text-danger { color: #ff3b30; }
+    </style>
+    <script>
+        async function rafraichirDonnees() {
+            const txtMeteo = document.getElementById('val-meteo');
+            const txtNiveau = document.getElementById('val-niveau');
+            const containerLogs = document.getElementById('logs-box');
+            
+            txtMeteo.innerHTML = "MaJ...";
+            txtNiveau.innerHTML = "MaJ...";
+            
+            try {
+                const reponseStatus = await fetch('/api/status');
+                const info = await reponseStatus.json();
+                
+                txtMeteo.innerHTML = info.meteo.erreur ? "⚠️ Erreur" : `☀️ ${info.meteo.temp}°C`;
+                txtNiveau.innerHTML = info.niveau.eau_presente ? '<span class="text-ok">💧 OK</span>' : '<span class="text-danger">❌ VIDE</span>';
+                
+                const reponseLogs = await fetch('/api/logs');
+                const infoLogs = await reponseLogs.json();
+                
+                containerLogs.innerHTML = "";
+                infoLogs.logs.forEach(ligne => {
+                    const div = document.createElement('div');
+                    div.className = "log-line";
+                    div.innerText = ligne;
+                    if (ligne.includes('[CHECK]')) div.classList.add('log-check');
+                    if (ligne.includes('[MANUEL]')) div.classList.add('log-manuel');
+                    if (ligne.includes('[AUTO]')) div.classList.add('log-auto');
+                    if (ligne.includes('VIDE !')) div.classList.add('log-alerte');
+                    containerLogs.appendChild(div);
+                });
+            } catch (e) {
+                txtMeteo.innerHTML = "🌐 Erreur";
+                txtNiveau.innerHTML = "🌐 Erreur";
+            }
+        }
+
+        async function declencherArrosage() {
+            if (confirm("Êtes-vous sûr de vouloir lancer un arrosage manuel de 30 secondes ?")) {
+                const btn = document.getElementById('btn-arrosage');
+                btn.disabled = true;
+                btn.innerText = "⚡ Arrosage en cours...";
+                
+                try {
+                    const reponse = await fetch('/api/arroser', { method: 'POST' });
+                    const resultat = await reponse.json();
+                    alert(resultat.message);
+                } catch (e) {
+                    alert("Erreur lors de la communication avec le Raspberry Pi.");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "🌊 Lancer un arrosage manuel";
+                    rafraichirDonnees();
+                }
+            }
+        }
+        
+        window.onload = rafraichirDonnees;
+    </script>
+</head>
+<body>
+    <div class="main-container">
+        <h1 class="dashboard-title">🌱 Mon Jardin - Plantomatic</h1>
+        
+        <div class="header-status">
+            <div class="mini-card">
+                <p>Réservoir</p>
+                <div id="val-niveau" class="status-val">...</div>
+            </div>
+            <div class="mini-card">
+                <p>Chambéry</p>
+                <div id="val-meteo" class="status-val">...</div>
+            </div>
+            <button class="btn-refresh" onclick="rafraichirDonnees()">🔄</button>
+        </div>
+        
+        <div class="action-section">
+            <button id="btn-arrosage" class="btn-water" onclick="declencherArrosage()">🌊 Lancer un arrosage manuel</button>
+        </div>
+        
+        <div class="logs-section">
+            <h2 class="logs-title">📋 Historique</h2>
+            <div id="logs-box" class="logs-container"></div>
+        </div>
+    </div>
+</body>
+</html>
