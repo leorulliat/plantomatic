@@ -243,7 +243,7 @@ from datetime import datetime
 **API Publique :**
 ```python
 class CentralLogger:
-    def __init__(self, log_file: str = "arrosage.log", log_level: str = "INFO"):
+    def __init__(self, log_file: str = "plantomatic.log", log_level: str = "INFO"):
         """Configure logging vers fichier + console"""
         self.log_file = log_file
         # Crée un logger pour fichier + un pour stdout (journalctl)

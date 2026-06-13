@@ -1,7 +1,7 @@
 import logging
 import os
 
-LOG_FILE = "arrosage.log"
+LOG_FILE = "plantomatic.log"
 
 # 1. Configuration de NOTRE système de logs pour l'arrosage
 logging.basicConfig(

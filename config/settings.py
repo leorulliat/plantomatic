@@ -9,7 +9,7 @@ from pathlib import Path
 # ========== PATHS & DIRECTORIES ==========
 PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "plantomatic.db"
-LOG_FILE = PROJECT_ROOT / "arrosage.log"
+LOG_FILE = PROJECT_ROOT / "plantomatic.log"
 PHOTO_DIR = PROJECT_ROOT / "photos"
 EXPORT_DIR = PROJECT_ROOT / "exports"
 
