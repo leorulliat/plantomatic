@@ -27,3 +27,6 @@ build/
 # Local files
 .env
 .lgd-nfy0
+
+PROJECT_PLAN.md
+plantomatic.db
