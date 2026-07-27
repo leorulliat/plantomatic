@@ -5,13 +5,14 @@ Toutes les constantes et paramètres système sont définis ici.
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # ========== PATHS & DIRECTORIES ==========
 PROJECT_ROOT = Path(__file__).parent.parent
-DB_PATH = PROJECT_ROOT / "plantomatic.db"
-LOG_FILE = PROJECT_ROOT / "plantomatic.log"
-PHOTO_DIR = PROJECT_ROOT / "photos"
-EXPORT_DIR = PROJECT_ROOT / "exports"
+DB_PATH = Path(os.getenv("DB_PATH", str(PROJECT_ROOT / "plantomatic.db")))
+LOG_FILE = Path(os.getenv("LOG_PATH", str(PROJECT_ROOT / "plantomatic.log")))
+PHOTO_DIR = Path(os.getenv("PHOTO_DIR", str(PROJECT_ROOT / "photos")))
+EXPORT_DIR = Path(os.getenv("EXPORT_DIR", str(PROJECT_ROOT / "exports")))
 
 # Créer les répertoires s'ils n'existent pas
 PHOTO_DIR.mkdir(exist_ok=True, parents=True)
