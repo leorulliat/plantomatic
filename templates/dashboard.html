@@ -35,10 +35,23 @@
         .log-check { color: #888888; }
         .log-manuel { color: #4fc1ff; font-weight: bold; }
         .log-auto { color: #9cdcfe; font-weight: bold; }
+        .log-camera { color: #30d158; font-weight: bold; }
         .log-alerte { color: #ff453a; font-weight: bold; background-color: rgba(255,69,58,0.1); }
         
         .text-ok { color: #24b147; }
         .text-danger { color: #ff3b30; }
+
+        /* Bouton d'action Caméra */
+        .btn-camera { background-color: #34c759; color: white; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 10px; width: 100%; cursor: pointer; box-shadow: 0 4px 8px rgba(52,199,89,0.2); -webkit-tap-highlight-color: transparent; }
+        .btn-camera:active { background-color: #28a745; transform: scale(0.98); }
+        .btn-camera:disabled { background-color: #aeaeae; box-shadow: none; cursor: not-allowed; }
+
+        /* Section Photo */
+        .photo-section { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .photo-title { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
+        .photo-container { display: flex; justify-content: center; align-items: center; background-color: #eaeaea; border-radius: 8px; overflow: hidden; position: relative; width: 100%; min-height: 80px; max-height: 280px; }
+        .photo-img { width: 100%; height: auto; object-fit: contain; max-height: 280px; display: none; }
+        .photo-placeholder { color: #8e8e93; font-size: 13px; text-align: center; padding: 20px; }
     </style>
     <script>
         async function rafraichirDonnees() {
@@ -67,6 +80,7 @@
                     if (ligne.includes('[CHECK]')) div.classList.add('log-check');
                     if (ligne.includes('[MANUEL]')) div.classList.add('log-manuel');
                     if (ligne.includes('[AUTO]')) div.classList.add('log-auto');
+                    if (ligne.includes('[CAMERA]')) div.classList.add('log-camera');
                     if (ligne.includes('VIDE !')) div.classList.add('log-alerte');
                     containerLogs.appendChild(div);
                 });
@@ -95,6 +109,35 @@
                 }
             }
         }
+
+        async function declencherPhoto() {
+            const btn = document.getElementById('btn-photo');
+            const placeholder = document.getElementById('photo-vide');
+            const img = document.getElementById('photo-prev');
+            
+            btn.disabled = true;
+            btn.innerText = "⚡ Prise de vue...";
+            
+            try {
+                const reponse = await fetch('/api/camera', { method: 'POST' });
+                const resultat = await reponse.json();
+                
+                if (resultat.success) {
+                    // Charger l'image avec un paramètre unique pour forcer le rafraîchissement (cache-busting)
+                    img.src = `/photos/${resultat.filename}?t=${new Date().getTime()}`;
+                    img.style.display = "block";
+                    placeholder.style.display = "none";
+                } else {
+                    alert(resultat.message);
+                }
+            } catch (e) {
+                alert("Erreur de connexion avec le Raspberry Pi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "📸 Prendre une photo";
+                rafraichirDonnees();
+            }
+        }
         
         window.onload = rafraichirDonnees;
     </script>
@@ -115,8 +158,17 @@
             <button class="btn-refresh" onclick="rafraichirDonnees()">🔄</button>
         </div>
         
-        <div class="action-section">
+        <div class="action-section" style="display: flex; flex-direction: column; gap: 10px;">
             <button id="btn-arrosage" class="btn-water" onclick="declencherArrosage()">🌊 Lancer un arrosage manuel</button>
+            <button id="btn-photo" class="btn-camera" onclick="declencherPhoto()">📸 Prendre une photo</button>
+        </div>
+        
+        <div class="photo-section">
+            <h2 class="photo-title">📸 Dernière Photo</h2>
+            <div class="photo-container">
+                <div id="photo-vide" class="photo-placeholder">Aucune photo prise pour le moment.</div>
+                <img id="photo-prev" class="photo-img" src="" alt="Dernière capture">
+            </div>
         </div>
         
         <div class="logs-section">

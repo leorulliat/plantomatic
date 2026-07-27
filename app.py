@@ -1,7 +1,15 @@
-from flask import Flask, render_template, jsonify, request
+import os
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from api.meteo import recuperer_meteo_chambery
 from api.logger import lire_les_logs, enregistrer_check_2h
 import subprocess # Pour appeler notre script de cycle proprement
+
+# Chargement sécurisé de dotenv si disponible
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 try:
     from gpiozero import Button
@@ -56,6 +64,34 @@ def api_arroser():
         from api.logger import enregistrer_arrosage_manuel
         enregistrer_arrosage_manuel("Correct (Simulation PC)", 30)
         return jsonify({"message": "Simulé avec succès (Hors Raspberry Pi) !"})
+
+@app.route('/api/camera', methods=['POST'])
+def api_camera():
+    """Déclenche la prise de photo depuis l'interface web"""
+    from api.camera import capturer_photo
+    succes, resultat = capturer_photo()
+    if succes:
+        nom_fichier = os.path.basename(resultat)
+        return jsonify({
+            "success": True,
+            "message": "Photo capturée avec succès !",
+            "filename": nom_fichier
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "message": f"Échec de la capture : {resultat}"
+        }), 500
+
+@app.route('/photos/<path:filename>')
+def servir_photo(filename):
+    """Sert les photos sauvegardées depuis le dossier PHOTO_DIR"""
+    photo_dir = os.getenv("PHOTO_DIR")
+    if not photo_dir:
+        # Fallback par défaut vers le dossier photos du projet
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        photo_dir = os.path.join(project_root, "photos")
+    return send_from_directory(photo_dir, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

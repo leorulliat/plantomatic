@@ -28,5 +28,9 @@ build/
 .env
 .lgd-nfy0
 
+# Photos
+photos/
+exports/
+
 PROJECT_PLAN.md
 plantomatic.db

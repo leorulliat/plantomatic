@@ -30,6 +30,13 @@ def enregistrer_arrosage_auto(statut_eau, duree=30):
     """Arrosage automatique planifié"""
     logging.info(f"[AUTO] Planification exécutée ({duree}s) | Eau au départ: {statut_eau}")
 
+def enregistrer_photo_capture(chemin_photo, succes=True, erreur=None):
+    """Enregistre une capture de photo"""
+    if succes:
+        logging.info(f"[CAMERA] Photo capturée : {chemin_photo}")
+    else:
+        logging.info(f"[CAMERA] Échec capture : {erreur}")
+
 def lire_les_logs(nb_lignes=20):
     if not os.path.exists(LOG_FILE):
         return ["Aucun historique disponible."]
