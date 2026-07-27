@@ -46,14 +46,43 @@
         .btn-camera:active { background-color: #28a745; transform: scale(0.98); }
         .btn-camera:disabled { background-color: #aeaeae; box-shadow: none; cursor: not-allowed; }
 
-        /* Section Photo */
+        /* Section Photo / Galerie */
         .photo-section { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .photo-title { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
-        .photo-container { display: flex; justify-content: center; align-items: center; background-color: #eaeaea; border-radius: 8px; overflow: hidden; position: relative; width: 100%; min-height: 80px; max-height: 280px; }
-        .photo-img { width: 100%; height: auto; object-fit: contain; max-height: 280px; display: none; }
-        .photo-placeholder { color: #8e8e93; font-size: 13px; text-align: center; padding: 20px; }
+        .gallery-container { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0; scrollbar-width: thin; }
+        .gallery-container::-webkit-scrollbar { height: 6px; }
+        .gallery-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .gallery-item { flex: 0 0 100px; height: 75px; border-radius: 6px; overflow: hidden; cursor: pointer; background-color: #eaeaea; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .gallery-item:hover { transform: scale(1.03); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-placeholder { color: #8e8e93; font-size: 13px; text-align: center; padding: 20px; width: 100%; }
+
+        /* Dialog / Lightbox */
+        .dialog-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
+        .dialog-content { background: #1c1c1e; color: white; border-radius: 12px; max-width: 95%; max-height: 90%; width: 440px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #2c2c2e; border-bottom: 1px solid #3a3a3c; }
+        .dialog-title { font-size: 12px; color: #eaeaea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; font-family: monospace; }
+        .dialog-controls { display: flex; gap: 15px; }
+        .dialog-btn { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; display: flex; align-items: center; text-decoration: none; user-select: none; }
+        .dialog-btn:hover { color: #30d158; }
+        .dialog-body { flex: 1; overflow: hidden; display: flex; justify-content: center; align-items: center; background: black; position: relative; min-height: 250px; max-height: 380px; cursor: grab; user-select: none; }
+        .dialog-body:active { cursor: grabbing; }
+        .dialog-img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; transition: transform 0.1s ease-out; user-select: none; pointer-events: none; }
+        .dialog-zoom-bar { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; font-size: 12px; }
+        .dialog-zoom-bar input[type="range"] { flex: 1; accent-color: #34c759; cursor: pointer; }
+        .reset-btn { background: #3a3a3c; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+        .reset-btn:hover { background: #48484a; }
     </style>
+
     <script>
+        // Variables globales pour le zoom et déplacement
+        let currentZoom = 1;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let translateX = 0;
+        let translateY = 0;
+
         async function rafraichirDonnees() {
             const txtMeteo = document.getElementById('val-meteo');
             const txtNiveau = document.getElementById('val-niveau');
@@ -84,9 +113,41 @@
                     if (ligne.includes('VIDE !')) div.classList.add('log-alerte');
                     containerLogs.appendChild(div);
                 });
+
+                // Recharger également la galerie de photos
+                await chargerGalerie();
             } catch (e) {
                 txtMeteo.innerHTML = "🌐 Erreur";
                 txtNiveau.innerHTML = "🌐 Erreur";
+            }
+        }
+
+        async function chargerGalerie() {
+            try {
+                const reponse = await fetch('/api/photos');
+                const info = await reponse.json();
+                const container = document.getElementById('gallery-container');
+                
+                container.innerHTML = "";
+                if (info.photos && info.photos.length > 0) {
+                    info.photos.forEach(filename => {
+                        const item = document.createElement('div');
+                        item.className = "gallery-item";
+                        item.onclick = () => ouvrirDialog(filename);
+                        
+                        const img = document.createElement('img');
+                        img.src = `/photos/${filename}`;
+                        img.loading = "lazy";
+                        img.alt = filename;
+                        
+                        item.appendChild(img);
+                        container.appendChild(item);
+                    });
+                } else {
+                    container.innerHTML = '<div class="photo-placeholder">Aucune photo disponible.</div>';
+                }
+            } catch (e) {
+                console.error("Erreur chargement galerie", e);
             }
         }
 
@@ -112,9 +173,6 @@
 
         async function declencherPhoto() {
             const btn = document.getElementById('btn-photo');
-            const placeholder = document.getElementById('photo-vide');
-            const img = document.getElementById('photo-prev');
-            
             btn.disabled = true;
             btn.innerText = "⚡ Prise de vue...";
             
@@ -123,10 +181,9 @@
                 const resultat = await reponse.json();
                 
                 if (resultat.success) {
-                    // Charger l'image avec un paramètre unique pour forcer le rafraîchissement (cache-busting)
-                    img.src = `/photos/${resultat.filename}?t=${new Date().getTime()}`;
-                    img.style.display = "block";
-                    placeholder.style.display = "none";
+                    rafraichirDonnees(); // Recharge tout, y compris la galerie
+                    // Ouvrir automatiquement la photo qui vient d'être prise
+                    ouvrirDialog(resultat.filename);
                 } else {
                     alert(resultat.message);
                 }
@@ -135,11 +192,96 @@
             } finally {
                 btn.disabled = false;
                 btn.innerText = "📸 Prendre une photo";
-                rafraichirDonnees();
             }
         }
+
+        // --- Logique du Dialog (Lightbox) Zoomable ---
+
+        function ouvrirDialog(filename) {
+            const dialog = document.getElementById('photo-dialog');
+            const img = document.getElementById('dialog-img');
+            const title = document.getElementById('dialog-filename');
+            const download = document.getElementById('dialog-download');
+            
+            title.innerText = filename;
+            download.href = `/photos/${filename}`;
+            img.src = `/photos/${filename}`;
+            img.style.display = "block";
+            
+            resetZoom();
+            dialog.style.display = 'flex';
+        }
+
+        function fermerDialog() {
+            document.getElementById('photo-dialog').style.display = 'none';
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            document.getElementById('zoom-slider').value = 1;
+            appliquerTransformation();
+        }
+
+        function appliquerTransformation() {
+            const img = document.getElementById('dialog-img');
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+        }
+
+        function initDragEvents() {
+            const slider = document.getElementById('zoom-slider');
+            const dialogBody = document.getElementById('dialog-body');
+
+            // Zoom via slider
+            slider.addEventListener('input', (e) => {
+                currentZoom = parseFloat(e.target.value);
+                if (currentZoom === 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+                appliquerTransformation();
+            });
+
+            // Déplacement (Drag)
+            const startDrag = (e) => {
+                if (currentZoom <= 1) return;
+                isDragging = true;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                startX = clientX - translateX;
+                startY = clientY - translateY;
+            };
+
+            const drag = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                translateX = clientX - startX;
+                translateY = clientY - startY;
+                appliquerTransformation();
+            };
+
+            const endDrag = () => {
+                isDragging = false;
+            };
+
+            // Événements souris
+            dialogBody.addEventListener('mousedown', startDrag);
+            dialogBody.addEventListener('mousemove', drag);
+            window.addEventListener('mouseup', endDrag);
+
+            // Événements tactiles (mobile)
+            dialogBody.addEventListener('touchstart', startDrag, { passive: false });
+            dialogBody.addEventListener('touchmove', drag, { passive: false });
+            window.addEventListener('touchend', endDrag);
+        }
         
-        window.onload = rafraichirDonnees;
+        window.onload = () => {
+            rafraichirDonnees();
+            initDragEvents();
+        };
     </script>
 </head>
 <body>
@@ -162,12 +304,10 @@
             <button id="btn-arrosage" class="btn-water" onclick="declencherArrosage()">🌊 Lancer un arrosage manuel</button>
             <button id="btn-photo" class="btn-camera" onclick="declencherPhoto()">📸 Prendre une photo</button>
         </div>
-        
         <div class="photo-section">
-            <h2 class="photo-title">📸 Dernière Photo</h2>
-            <div class="photo-container">
-                <div id="photo-vide" class="photo-placeholder">Aucune photo prise pour le moment.</div>
-                <img id="photo-prev" class="photo-img" src="" alt="Dernière capture">
+            <h2 class="photo-title">📸 Photos Récentes</h2>
+            <div id="gallery-container" class="gallery-container">
+                <div class="photo-placeholder">Aucune photo disponible.</div>
             </div>
         </div>
         
@@ -176,5 +316,26 @@
             <div id="logs-box" class="logs-container"></div>
         </div>
     </div>
+
+    <!-- Boîte de dialogue (dialog/lightbox) pour l'affichage de l'image -->
+    <div id="photo-dialog" class="dialog-overlay">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <span id="dialog-filename" class="dialog-title">Nom de la photo</span>
+                <div class="dialog-controls">
+                    <a id="dialog-download" href="#" download class="dialog-btn" title="Télécharger la photo">💾</a>
+                    <button class="dialog-btn" onclick="fermerDialog()" title="Fermer la fenêtre">✕</button>
+                </div>
+            </div>
+            <div class="dialog-body" id="dialog-body">
+                <img id="dialog-img" class="dialog-img" src="" alt="Photo zoomable">
+            </div>
+            <div class="dialog-zoom-bar">
+                <span>Zoom :</span>
+                <input type="range" id="zoom-slider" min="1" max="4" step="0.1" value="1">
+                <button class="dialog-btn reset-btn" onclick="resetZoom()">Reset</button>
+            </div>
+        </div>
+    </div>
 </body>
-</html>
+</html>

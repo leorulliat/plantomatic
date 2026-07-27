@@ -93,5 +93,26 @@ def servir_photo(filename):
         photo_dir = os.path.join(project_root, "photos")
     return send_from_directory(photo_dir, filename)
 
+@app.route('/api/photos', methods=['GET'])
+def api_photos():
+    """Retourne la liste des photos prises par ordre chronologique inversé"""
+    photo_dir = os.getenv("PHOTO_DIR")
+    if not photo_dir:
+        # Fallback par défaut vers le dossier photos du projet
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        photo_dir = os.path.join(project_root, "photos")
+        
+    if not os.path.exists(photo_dir):
+        return jsonify({"photos": []})
+        
+    try:
+        # Lister les fichiers jpg/jpeg
+        fichiers = [f for f in os.listdir(photo_dir) if f.lower().endswith(('.jpg', '.jpeg'))]
+        # Trier par ordre alphabétique décroissant (équivalent à l'ordre chronologique inversé pour notre horodatage)
+        fichiers.sort(reverse=True)
+        return jsonify({"photos": fichiers})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
