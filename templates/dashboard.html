@@ -60,8 +60,10 @@
         /* Dialog / Lightbox */
         .dialog-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
         .dialog-content { background: #1c1c1e; color: white; border-radius: 12px; max-width: 95%; max-height: 90%; width: 440px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #2c2c2e; border-bottom: 1px solid #3a3a3c; }
-        .dialog-title { font-size: 12px; color: #eaeaea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; font-family: monospace; }
+        .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #2c2c2e; border-bottom: 1px solid #3a3a3c; gap: 10px; }
+        .dialog-title-wrap { display: flex; flex-direction: column; min-width: 0; }
+        .dialog-title { font-size: 12px; color: #eaeaea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; font-family: monospace; }
+        .dialog-meta { color: #999; font-size: 11px; margin-top: 2px; max-width: 240px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .dialog-controls { display: flex; gap: 10px; align-items: center; }
         .dialog-btn { background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; text-decoration: none; user-select: none; }
         .dialog-btn:hover { color: #30d158; }
@@ -136,15 +138,16 @@
                 currentPhotos = info.photos || [];
                 container.innerHTML = "";
                 if (currentPhotos.length > 0) {
-                    currentPhotos.forEach(filename => {
+                    currentPhotos.forEach(photo => {
                         const item = document.createElement('div');
                         item.className = "gallery-item";
-                        item.onclick = () => ouvrirDialog(filename);
+                        item.onclick = () => ouvrirDialog(photo.filename);
                         
                         const img = document.createElement('img');
-                        img.src = `/photos/${filename}`;
+                        img.src = `/photos/${photo.filename}`;
                         img.loading = "lazy";
-                        img.alt = filename;
+                        img.alt = photo.filename;
+                        img.title = photo.created_at ? `Créée le ${photo.created_at}` : photo.filename;
                         
                         item.appendChild(img);
                         container.appendChild(item);
@@ -226,20 +229,23 @@
             const normalizedIndex = (index + currentPhotos.length) % currentPhotos.length;
             currentPhotoIndex = normalizedIndex;
 
-            const filename = currentPhotos[currentPhotoIndex];
+            const photo = currentPhotos[currentPhotoIndex];
             const dialog = document.getElementById('photo-dialog');
             const img = document.getElementById('dialog-img');
             const title = document.getElementById('dialog-filename');
+            const meta = document.getElementById('dialog-meta');
             const download = document.getElementById('dialog-download');
             const prevBtn = document.getElementById('dialog-prev');
             const nextBtn = document.getElementById('dialog-next');
             const counter = document.getElementById('dialog-counter');
 
-            title.innerText = filename;
-            download.href = `/photos/${filename}`;
-            img.src = `/photos/${filename}`;
+            title.innerText = photo.filename;
+            title.title = photo.filename;
+            meta.innerText = photo.created_at ? `Créée le ${photo.created_at}` : "Date inconnue";
+            download.href = `/photos/${photo.filename}`;
+            img.src = `/photos/${photo.filename}`;
             img.style.display = "block";
-            dialog.dataset.filename = filename;
+            dialog.dataset.filename = photo.filename;
             dialog.dataset.index = String(currentPhotoIndex);
             counter.innerText = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
 
@@ -406,7 +412,10 @@
     <div id="photo-dialog" class="dialog-overlay">
         <div class="dialog-content">
             <div class="dialog-header">
-                <span id="dialog-filename" class="dialog-title">Nom de la photo</span>
+                <div class="dialog-title-wrap">
+                    <span id="dialog-filename" class="dialog-title" title="Nom de la photo">Nom de la photo</span>
+                    <span id="dialog-meta" class="dialog-meta"></span>
+                </div>
                 <span id="dialog-counter" class="dialog-counter"></span>
                 <div class="dialog-controls">
                     <button id="dialog-prev" class="dialog-btn dialog-nav" onclick="afficherPhotoPrecedente()" title="Photo précédente">◀</button>

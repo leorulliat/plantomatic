@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from api.meteo import recuperer_meteo_chambery
 from api.logger import lire_les_logs, enregistrer_check_2h
@@ -98,11 +99,22 @@ def api_photos():
         return jsonify({"photos": []})
         
     try:
-        # Lister les fichiers jpg/jpeg
-        fichiers = [f for f in os.listdir(photo_dir) if f.lower().endswith(('.jpg', '.jpeg'))]
-        # Trier par ordre alphabétique décroissant (équivalent à l'ordre chronologique inversé pour notre horodatage)
-        fichiers.sort(reverse=True)
-        return jsonify({"photos": fichiers})
+        photos = []
+        for fichier in os.listdir(photo_dir):
+            if not fichier.lower().endswith(('.jpg', '.jpeg')):
+                continue
+            chemin = photo_dir / fichier
+            try:
+                created_at = datetime.fromtimestamp(chemin.stat().st_ctime).isoformat(sep=' ', timespec='seconds')
+            except Exception:
+                created_at = None
+            photos.append({
+                "filename": fichier,
+                "created_at": created_at
+            })
+
+        photos.sort(key=lambda item: item["created_at"] or "", reverse=True)
+        return jsonify({"photos": photos})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
