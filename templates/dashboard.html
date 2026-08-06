@@ -211,6 +211,33 @@
             document.getElementById('duration-dialog').style.display = 'none';
         }
 
+        function mettreAJourBoutonArrosage(texte) {
+            const btn = document.getElementById('btn-arrosage');
+            if (btn) {
+                btn.innerText = texte;
+            }
+        }
+
+        function demarrerCompteurArrosage(dureeSecondes) {
+            const btn = document.getElementById('btn-arrosage');
+            if (!btn) return;
+
+            btn.disabled = true;
+            let restant = dureeSecondes;
+            mettreAJourBoutonArrosage(`⚡ Arrosage en cours... ${restant}s`);
+
+            const intervalId = window.setInterval(() => {
+                restant -= 1;
+                if (restant > 0) {
+                    mettreAJourBoutonArrosage(`⚡ Arrosage en cours... ${restant}s`);
+                } else {
+                    window.clearInterval(intervalId);
+                    mettreAJourBoutonArrosage('🌊 Lancer un arrosage manuel');
+                    btn.disabled = false;
+                }
+            }, 1000);
+        }
+
         async function declencherArrosage() {
             const inputDuree = document.getElementById('input-duree-arrosage');
             const duree = parseInt(inputDuree.value, 10) || 30;
@@ -225,9 +252,7 @@
             fermerDialogArrosage();
 
             if (confirm(`Êtes-vous sûr de vouloir lancer un arrosage manuel de ${dureeValide} secondes ?`)) {
-                const btn = document.getElementById('btn-arrosage');
-                btn.disabled = true;
-                btn.innerText = "⚡ Arrosage en cours...";
+                demarrerCompteurArrosage(dureeValide);
                 
                 try {
                     const reponse = await fetch('/api/arroser', {
@@ -240,8 +265,11 @@
                 } catch (e) {
                     alert("Erreur lors de la communication avec le Raspberry Pi.");
                 } finally {
-                    btn.disabled = false;
-                    btn.innerText = "🌊 Lancer un arrosage manuel";
+                    const btn = document.getElementById('btn-arrosage');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "🌊 Lancer un arrosage manuel";
+                    }
                     rafraichirDonnees();
                 }
             }
