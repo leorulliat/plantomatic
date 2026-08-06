@@ -258,6 +258,22 @@ class TestCameraEvents:
         assert events[0]['photo_path'] == "/photos/photo3.jpg"  # Dernier
         assert events[0]['file_size_kb'] == 300
 
+    def test_insert_camera_event_with_metadata(self, temp_db):
+        """Insère un événement caméra avec température et état du réservoir."""
+        event_id = temp_db.insert_camera_event(
+            "/photos/photo_meta.jpg",
+            123,
+            temp_celsius=25.3,
+            water_level_ok=False
+        )
+        assert isinstance(event_id, int)
+        assert event_id > 0
+
+        events = temp_db.get_camera_events(limit=1)
+        assert events[0]['photo_path'] == "/photos/photo_meta.jpg"
+        assert events[0]['temp_celsius'] == 25.3
+        assert events[0]['water_level_ok'] == 0
+
 
 class TestCleanup:
     """Tests pour le nettoyage des données."""

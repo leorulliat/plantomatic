@@ -3,7 +3,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 from api.logger import enregistrer_photo_capture
-from config.settings import get_photo_storage_dir
+from api.meteo import recuperer_meteo_chambery
+from core.database import db
+from config.settings import get_photo_storage_dir, GPIO_WATER_LEVEL
+from typing import Optional
 
 # Chargement sécurisé de dotenv si disponible
 try:
@@ -18,6 +21,32 @@ try:
     SUR_RASPBERRY = True
 except (ImportError, Exception):
     SUR_RASPBERRY = False
+
+
+def _get_current_photo_context() -> tuple[Optional[float], bool]:
+    """Retourne la température et l'état du réservoir au moment de la prise de vue."""
+    temp_celsius = None
+    water_level_ok = True
+
+    try:
+        meteo = recuperer_meteo_chambery()
+        if not meteo.get('erreur', True):
+            temp_celsius = meteo.get('temp')
+    except Exception:
+        temp_celsius = None
+
+    if SUR_RASPBERRY:
+        try:
+            from gpiozero import Button
+            capteur_eau = Button(GPIO_WATER_LEVEL, pull_up=True)
+            water_level_ok = capteur_eau.is_pressed
+            capteur_eau.close()
+        except Exception:
+            water_level_ok = True
+    else:
+        water_level_ok = True
+
+    return temp_celsius, water_level_ok
 
 
 def capturer_photo() -> tuple[bool, str]:
@@ -66,11 +95,6 @@ def capturer_photo() -> tuple[bool, str]:
             # Fermeture propre
             picam2.stop()
             picam2.close()
-            
-            # Enregistrement dans les logs de l'arrosage
-            enregistrer_photo_capture(str(file_path), succes=True)
-            return True, str(file_path)
-            
         except Exception as e:
             erreur_msg = f"Erreur matérielle caméra : {e}"
             enregistrer_photo_capture("", succes=False, erreur=erreur_msg)
@@ -97,10 +121,25 @@ def capturer_photo() -> tuple[bool, str]:
             )
             with open(file_path, "wb") as f:
                 f.write(mini_jpeg)
-                
-            enregistrer_photo_capture(str(file_path), succes=True)
-            return True, str(file_path)
         except Exception as e:
             erreur_msg = f"Erreur simulation : {e}"
             enregistrer_photo_capture("", succes=False, erreur=erreur_msg)
             return False, erreur_msg
+
+    temp_celsius, water_level_ok = _get_current_photo_context()
+    file_size_kb = int(file_path.stat().st_size / 1024)
+    db.insert_camera_event(
+        str(file_path),
+        file_size_kb=file_size_kb,
+        temp_celsius=temp_celsius,
+        water_level_ok=water_level_ok
+    )
+    enregistrer_photo_capture(str(file_path), succes=True)
+
+    return True, {
+        'photo_path': str(file_path),
+        'filename': file_path.name,
+        'file_size_kb': file_size_kb,
+        'temp_celsius': temp_celsius,
+        'water_level_ok': water_level_ok
+    }

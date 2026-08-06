@@ -121,7 +121,9 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     photo_path TEXT NOT NULL,
-                    file_size_kb INTEGER
+                    file_size_kb INTEGER,
+                    temp_celsius REAL,
+                    water_level_ok INTEGER
                 )
             """)
             
@@ -139,6 +141,19 @@ class Database:
                 ON watering_events(timestamp DESC)
             """)
             
+            conn.commit()
+        self._ensure_camera_event_columns()
+    
+    def _ensure_camera_event_columns(self) -> None:
+        """Ajoute les colonnes manquantes de camera_events si nécessaire."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(camera_events)")
+            existing_columns = {row['name'] for row in cursor.fetchall()}
+            if 'temp_celsius' not in existing_columns:
+                cursor.execute("ALTER TABLE camera_events ADD COLUMN temp_celsius REAL")
+            if 'water_level_ok' not in existing_columns:
+                cursor.execute("ALTER TABLE camera_events ADD COLUMN water_level_ok INTEGER")
             conn.commit()
     
     # ========== INSERT METHODS ==========
@@ -219,13 +234,21 @@ class Database:
             conn.commit()
             return cursor.lastrowid
     
-    def insert_camera_event(self, photo_path: str, file_size_kb: int = 0) -> int:
+    def insert_camera_event(
+        self,
+        photo_path: str,
+        file_size_kb: int = 0,
+        temp_celsius: Optional[float] = None,
+        water_level_ok: Optional[bool] = None
+    ) -> int:
         """
         Enregistre une photo prise.
         
         Args:
             photo_path: Chemin absolu de la photo
             file_size_kb: Taille fichier en KB
+            temp_celsius: Température mesurée au moment de la photo
+            water_level_ok: Booléen niveau d'eau (True=plein, False=vide)
         
         Returns:
             int: ID de la ligne insérée
@@ -234,9 +257,14 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO camera_events 
-                (photo_path, file_size_kb)
-                VALUES (?, ?)
-            """, (photo_path, file_size_kb))
+                (photo_path, file_size_kb, temp_celsius, water_level_ok)
+                VALUES (?, ?, ?, ?)
+            """, (
+                photo_path,
+                file_size_kb,
+                temp_celsius,
+                1 if water_level_ok else 0 if water_level_ok is not None else None
+            ))
             conn.commit()
             return cursor.lastrowid
     
@@ -382,12 +410,33 @@ class Database:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM camera_events 
+                SELECT id, timestamp, photo_path, file_size_kb, temp_celsius, water_level_ok
+                FROM camera_events 
                 ORDER BY timestamp DESC, id DESC
                 LIMIT ?
             """, (limit,))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
+    
+    def delete_camera_event(self, photo_path: str) -> int:
+        """
+        Supprime un événement caméra associé à un chemin de photo.
+        
+        Args:
+            photo_path: Chemin absolu de la photo à supprimer
+        
+        Returns:
+            int: Nombre de lignes supprimées
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM camera_events WHERE photo_path = ?",
+                (photo_path,)
+            )
+            deleted = cursor.rowcount
+            conn.commit()
+            return deleted
     
     # ========== DELETE METHODS ==========
     

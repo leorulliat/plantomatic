@@ -210,8 +210,10 @@
                 
                 if (resultat.success) {
                     await rafraichirDonnees(); // Recharge tout, y compris la galerie
-                    // Ouvrir automatiquement la photo qui vient d'être prise
-                    ouvrirDialog(resultat.filename);
+                    const filename = resultat.photo?.filename || resultat.filename;
+                    if (filename) {
+                        ouvrirDialog(filename);
+                    }
                 } else {
                     alert(resultat.message);
                 }
@@ -229,7 +231,7 @@
 
         function ouvrirDialog(filename) {
             const dialog = document.getElementById('photo-dialog');
-            const index = currentPhotos.indexOf(filename);
+            const index = currentPhotos.findIndex(photo => photo.filename === filename);
             currentPhotoIndex = index !== -1 ? index : 0;
 
             if (currentPhotoIndex === -1 && currentPhotos.length > 0) {
@@ -260,7 +262,15 @@
 
             title.innerText = photo.created_at ? photo.created_at : "Date inconnue";
             title.title = photo.filename;
-            meta.innerText = photo.filename;
+            const niveauText = photo.water_level_ok === null
+                ? 'État eau : inconnu'
+                : photo.water_level_ok
+                    ? 'Réservoir : plein'
+                    : 'Réservoir : vide';
+            const tempText = photo.temp_celsius === null
+                ? 'Température : inconnue'
+                : `Température : ${photo.temp_celsius}°C`;
+            meta.innerText = `${photo.filename} · ${tempText} · ${niveauText}`;
             download.href = `/photos/${photo.filename}`;
             img.src = `/photos/${photo.filename}`;
             img.style.display = "block";

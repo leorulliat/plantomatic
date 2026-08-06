@@ -78,11 +78,10 @@ def api_camera():
     from api.camera import capturer_photo
     succes, resultat = capturer_photo()
     if succes:
-        nom_fichier = os.path.basename(resultat)
         return jsonify({
             "success": True,
             "message": "Photo capturée avec succès !",
-            "filename": nom_fichier
+            "photo": resultat
         })
     else:
         return jsonify({
@@ -99,27 +98,19 @@ def servir_photo(filename):
 @app.route('/api/photos', methods=['GET'])
 def api_photos():
     """Retourne la liste des photos prises par ordre chronologique inversé"""
-    photo_dir = get_photo_storage_dir()
-    
-    if not photo_dir.exists():
-        return jsonify({"photos": []})
-        
     try:
         photos = []
-        for fichier in os.listdir(photo_dir):
-            if not fichier.lower().endswith(('.jpg', '.jpeg')):
-                continue
-            chemin = photo_dir / fichier
-            try:
-                created_at = datetime.fromtimestamp(chemin.stat().st_ctime).isoformat(sep=' ', timespec='seconds')
-            except Exception:
-                created_at = None
+        from core.database import db
+        events = db.get_camera_events(limit=100)
+        for event in events:
+            filename = os.path.basename(event['photo_path'])
             photos.append({
-                "filename": fichier,
-                "created_at": created_at
+                "filename": filename,
+                "created_at": event['timestamp'],
+                "file_size_kb": event['file_size_kb'],
+                "temp_celsius": event['temp_celsius'],
+                "water_level_ok": bool(event['water_level_ok']) if event['water_level_ok'] is not None else None
             })
-
-        photos.sort(key=lambda item: item["created_at"] or "", reverse=True)
         return jsonify({"photos": photos})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -137,6 +128,8 @@ def api_supprimer_photo(filename):
             return jsonify({"success": False, "error": "Fichier introuvable"}), 404
 
         photo_path.unlink()
+        from core.database import db
+        db.delete_camera_event(str(photo_path))
         enregistrer_photo_suppression(str(photo_path))
         return jsonify({"success": True})
     except Exception as e:
