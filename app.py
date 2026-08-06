@@ -106,5 +106,22 @@ def api_photos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/photos/<path:filename>', methods=['DELETE'])
+def api_supprimer_photo(filename):
+    """Supprime une photo depuis l'interface de visualisation."""
+    photo_dir = get_photo_storage_dir()
+    try:
+        photo_path = (photo_dir / filename).resolve()
+        base_dir = photo_dir.resolve()
+        if not str(photo_path).startswith(str(base_dir) + os.sep):
+            return jsonify({"success": False, "error": "Nom de fichier invalide"}), 400
+        if not photo_path.exists() or not photo_path.is_file():
+            return jsonify({"success": False, "error": "Fichier introuvable"}), 404
+
+        photo_path.unlink()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
