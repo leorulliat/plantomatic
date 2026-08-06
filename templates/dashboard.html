@@ -258,9 +258,9 @@
             const nextBtn = document.getElementById('dialog-next');
             const counter = document.getElementById('dialog-counter');
 
-            title.innerText = photo.filename;
+            title.innerText = photo.created_at ? photo.created_at : "Date inconnue";
             title.title = photo.filename;
-            meta.innerText = photo.created_at ? `Créée le ${photo.created_at}` : "Date inconnue";
+            meta.innerText = photo.filename;
             download.href = `/photos/${photo.filename}`;
             img.src = `/photos/${photo.filename}`;
             img.style.display = "block";
