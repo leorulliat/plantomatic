@@ -47,8 +47,16 @@
         .btn-camera:disabled { background-color: #aeaeae; box-shadow: none; cursor: not-allowed; }
 
         .arrosage-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .arrosage-duration-input { width: 100%; max-width: 130px; padding: 12px 10px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 14px; }
-        .arrosage-duration-label { font-size: 13px; color: #555; min-width: 90px; }
+
+        .duration-dialog-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 1100; justify-content: center; align-items: center; padding: 16px; }
+        .duration-dialog { background: white; border-radius: 12px; width: min(100%, 320px); padding: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .duration-dialog h3 { font-size: 16px; margin-bottom: 6px; color: #1c1c1e; }
+        .duration-dialog p { font-size: 13px; color: #666; margin-bottom: 12px; }
+        .duration-dialog input { width: 100%; padding: 12px 10px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 14px; margin-bottom: 12px; }
+        .duration-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .duration-dialog-actions button { border: none; border-radius: 8px; padding: 10px 12px; font-weight: 600; cursor: pointer; }
+        .duration-dialog-actions .btn-cancel { background: #e5e5ea; color: #333; }
+        .duration-dialog-actions .btn-confirm { background: #007aff; color: white; }
 
         /* Section Photo / Galerie */
         .photo-section { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -191,6 +199,18 @@
             }
         }
 
+        function ouvrirDialogArrosage() {
+            const dialog = document.getElementById('duration-dialog');
+            const inputDuree = document.getElementById('input-duree-arrosage');
+            inputDuree.value = 30;
+            inputDuree.focus();
+            dialog.style.display = 'flex';
+        }
+
+        function fermerDialogArrosage() {
+            document.getElementById('duration-dialog').style.display = 'none';
+        }
+
         async function declencherArrosage() {
             const inputDuree = document.getElementById('input-duree-arrosage');
             const duree = parseInt(inputDuree.value, 10) || 30;
@@ -201,6 +221,8 @@
                 inputDuree.value = dureeValide;
                 return;
             }
+
+            fermerDialogArrosage();
 
             if (confirm(`Êtes-vous sûr de vouloir lancer un arrosage manuel de ${dureeValide} secondes ?`)) {
                 const btn = document.getElementById('btn-arrosage');
@@ -451,11 +473,7 @@
         </div>
         
         <div class="action-section" style="display: flex; flex-direction: column; gap: 10px;">
-            <div class="arrosage-controls">
-                <label class="arrosage-duration-label" for="input-duree-arrosage">Durée</label>
-                <input id="input-duree-arrosage" class="arrosage-duration-input" type="number" min="5" max="45" step="5" value="30" aria-label="Durée arrosage en secondes" />
-            </div>
-            <button id="btn-arrosage" class="btn-water" onclick="declencherArrosage()">🌊 Lancer un arrosage manuel</button>
+            <button id="btn-arrosage" class="btn-water" onclick="ouvrirDialogArrosage()">🌊 Lancer un arrosage manuel</button>
             <button id="btn-photo" class="btn-camera" onclick="declencherPhoto()">📸 Prendre une photo</button>
         </div>
         <div class="photo-section">
@@ -468,6 +486,18 @@
         <div class="logs-section">
             <h2 class="logs-title">📋 Historique</h2>
             <div id="logs-box" class="logs-container"></div>
+        </div>
+    </div>
+
+    <div id="duration-dialog" class="duration-dialog-overlay">
+        <div class="duration-dialog">
+            <h3>⏱️ Durée d'arrosage</h3>
+            <p>Choisis la durée en secondes avant de valider.</p>
+            <input id="input-duree-arrosage" type="number" min="5" max="45" step="5" value="30" aria-label="Durée arrosage en secondes" onkeydown="if (event.key === 'Enter') declencherArrosage()" />
+            <div class="duration-dialog-actions">
+                <button class="btn-cancel" onclick="fermerDialogArrosage()">Annuler</button>
+                <button class="btn-confirm" onclick="declencherArrosage()">Valider</button>
+            </div>
         </div>
     </div>
 
