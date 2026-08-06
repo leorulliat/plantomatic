@@ -46,6 +46,10 @@
         .btn-camera:active { background-color: #28a745; transform: scale(0.98); }
         .btn-camera:disabled { background-color: #aeaeae; box-shadow: none; cursor: not-allowed; }
 
+        .arrosage-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .arrosage-duration-input { width: 100%; max-width: 130px; padding: 12px 10px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 14px; }
+        .arrosage-duration-label { font-size: 13px; color: #555; min-width: 90px; }
+
         /* Section Photo / Galerie */
         .photo-section { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .photo-title { font-size: 13px; color: #666; text-transform: uppercase; margin-bottom: 10px; }
@@ -161,15 +165,29 @@
         }
 
         async function declencherArrosage() {
-            if (confirm("Êtes-vous sûr de vouloir lancer un arrosage manuel de 30 secondes ?")) {
+            const inputDuree = document.getElementById('input-duree-arrosage');
+            const duree = parseInt(inputDuree.value, 10) || 30;
+            const dureeValide = Math.min(Math.max(duree, 5), 45);
+
+            if (duree !== dureeValide) {
+                alert('Veuillez saisir une durée entre 5 et 45 secondes.');
+                inputDuree.value = dureeValide;
+                return;
+            }
+
+            if (confirm(`Êtes-vous sûr de vouloir lancer un arrosage manuel de ${dureeValide} secondes ?`)) {
                 const btn = document.getElementById('btn-arrosage');
                 btn.disabled = true;
                 btn.innerText = "⚡ Arrosage en cours...";
                 
                 try {
-                    const reponse = await fetch('/api/arroser', { method: 'POST' });
+                    const reponse = await fetch('/api/arroser', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ duration_seconds: dureeValide })
+                    });
                     const resultat = await reponse.json();
-                    alert(resultat.message);
+                    alert(resultat.message || resultat.error || 'Réponse inconnue.');
                 } catch (e) {
                     alert("Erreur lors de la communication avec le Raspberry Pi.");
                 } finally {
@@ -392,6 +410,10 @@
         </div>
         
         <div class="action-section" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="arrosage-controls">
+                <label class="arrosage-duration-label" for="input-duree-arrosage">Durée</label>
+                <input id="input-duree-arrosage" class="arrosage-duration-input" type="number" min="5" max="45" step="5" value="30" aria-label="Durée arrosage en secondes" />
+            </div>
             <button id="btn-arrosage" class="btn-water" onclick="declencherArrosage()">🌊 Lancer un arrosage manuel</button>
             <button id="btn-photo" class="btn-camera" onclick="declencherPhoto()">📸 Prendre une photo</button>
         </div>

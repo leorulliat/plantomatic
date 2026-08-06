@@ -52,19 +52,25 @@ def api_logs():
 @app.route('/api/arroser', methods=['POST'])
 def api_arroser():
     """Route déclenchée au clic sur le bouton du smartphone"""
+    data = request.get_json(silent=True) or {}
+    duree = int(data.get('duration_seconds', 30)) if isinstance(data.get('duration_seconds', 30), (int, float, str)) else 30
+    if isinstance(duree, float):
+        duree = int(duree)
+    duree = max(5, min(45, duree))
+
     if SUR_RASPBERRY:
         # On importe la fonction du script et on l'exécute en mode MANUEL
         from cycle import executer_cycle
-        succes, message = executer_cycle(mode="MANUEL", duree=30)
+        succes, message = executer_cycle(mode="MANUEL", duree=duree)
         if succes:
-            return jsonify({"message": "L'arrosage de 30s s'est terminé avec succès !"})
+            return jsonify({"message": f"L'arrosage de {duree}s s'est terminé avec succès !"})
         else:
             return jsonify({"message": f"Échec : {message}"}), 500
     else:
         # Simulation visuelle si tu testes sur ton PC portable
         from api.logger import enregistrer_arrosage_manuel
-        enregistrer_arrosage_manuel("Correct (Simulation PC)", 30)
-        return jsonify({"message": "Simulé avec succès (Hors Raspberry Pi) !"})
+        enregistrer_arrosage_manuel("Correct (Simulation PC)", duree)
+        return jsonify({"message": f"Simulé avec succès (Hors Raspberry Pi) pour {duree}s !"})
 
 @app.route('/api/camera', methods=['POST'])
 def api_camera():
