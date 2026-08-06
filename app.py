@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from api.meteo import recuperer_meteo_chambery
 from api.logger import lire_les_logs, enregistrer_check_2h
+from config.settings import get_photo_storage_dir
 import subprocess # Pour appeler notre script de cycle proprement
 
 # Chargement sécurisé de dotenv si disponible
@@ -84,24 +85,16 @@ def api_camera():
 
 @app.route('/photos/<path:filename>')
 def servir_photo(filename):
-    """Sert les photos sauvegardées depuis le dossier PHOTO_DIR"""
-    photo_dir = os.getenv("PHOTO_DIR")
-    if not photo_dir:
-        # Fallback par défaut vers le dossier photos du projet
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        photo_dir = os.path.join(project_root, "photos")
-    return send_from_directory(photo_dir, filename)
+    """Sert les photos sauvegardées depuis le dossier photo actif."""
+    photo_dir = get_photo_storage_dir()
+    return send_from_directory(str(photo_dir), filename)
 
 @app.route('/api/photos', methods=['GET'])
 def api_photos():
     """Retourne la liste des photos prises par ordre chronologique inversé"""
-    photo_dir = os.getenv("PHOTO_DIR")
-    if not photo_dir:
-        # Fallback par défaut vers le dossier photos du projet
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        photo_dir = os.path.join(project_root, "photos")
-        
-    if not os.path.exists(photo_dir):
+    photo_dir = get_photo_storage_dir()
+    
+    if not photo_dir.exists():
         return jsonify({"photos": []})
         
     try:

@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from api.logger import enregistrer_photo_capture
+from config.settings import get_photo_storage_dir
 
 # Chargement sécurisé de dotenv si disponible
 try:
@@ -28,14 +29,8 @@ def capturer_photo() -> tuple[bool, str]:
     Retourne :
         tuple: (succes: bool, chemin_fichier_ou_erreur: str)
     """
-    # 1. Détermination du dossier de stockage (depuis .env ou fallback)
-    photo_dir_env = os.getenv("PHOTO_DIR")
-    if photo_dir_env:
-        output_dir = Path(photo_dir_env)
-    else:
-        # Fallback par défaut vers le dossier photos du projet
-        project_root = Path(__file__).parent.parent
-        output_dir = project_root / "photos"
+    # 1. Détermination du dossier de stockage principal ou de secours
+    output_dir = get_photo_storage_dir()
     
     try:
         # Assurer que le dossier existe
