@@ -81,6 +81,7 @@
         .dialog-img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; transition: transform 0.1s ease-out; user-select: none; pointer-events: none; }
         .dialog-zoom-bar { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; font-size: 12px; }
         .dialog-zoom-bar input[type="range"] { flex: 1; accent-color: #34c759; cursor: pointer; }
+        .dialog-carousel-nav { display: flex; justify-content: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; }
         .reset-btn { background: #3a3a3c; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
         .reset-btn:hover { background: #48484a; }
     </style>
@@ -440,8 +441,6 @@
                 </div>
                 <span id="dialog-counter" class="dialog-counter"></span>
                 <div class="dialog-controls">
-                    <button id="dialog-prev" class="dialog-btn dialog-nav" onclick="afficherPhotoPrecedente()" title="Photo précédente">◀</button>
-                    <button id="dialog-next" class="dialog-btn dialog-nav" onclick="afficherPhotoSuivante()" title="Photo suivante">▶</button>
                     <a id="dialog-download" href="#" download class="dialog-btn" title="Télécharger la photo">💾</a>
                     <button class="dialog-btn dialog-delete" onclick="supprimerPhoto()" title="Supprimer la photo">🗑️</button>
                     <button class="dialog-btn" onclick="fermerDialog()" title="Fermer la fenêtre">✕</button>
@@ -454,6 +453,10 @@
                 <span>Zoom :</span>
                 <input type="range" id="zoom-slider" min="1" max="4" step="0.1" value="1">
                 <button class="dialog-btn reset-btn" onclick="resetZoom()">Reset</button>
+            </div>
+            <div class="dialog-carousel-nav">
+                <button id="dialog-prev" class="dialog-btn dialog-nav" onclick="afficherPhotoPrecedente()" title="Photo précédente">◀</button>
+                <button id="dialog-next" class="dialog-btn dialog-nav" onclick="afficherPhotoSuivante()" title="Photo suivante">▶</button>
             </div>
         </div>
     </div>
