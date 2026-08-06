@@ -50,7 +50,6 @@ def api_logs():
 @app.route('/api/arroser', methods=['POST'])
 def api_arroser():
     """Route déclenchée au clic sur le bouton du smartphone"""
-    eau_presente = capteur_eau.is_pressed if SUR_RASPBERRY else True
     if SUR_RASPBERRY:
         # On importe la fonction du script et on l'exécute en mode MANUEL
         from cycle import executer_cycle
