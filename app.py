@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from api.meteo import recuperer_meteo_chambery
 from api.logger import lire_les_logs, enregistrer_check_2h, enregistrer_photo_suppression
@@ -20,6 +20,49 @@ except (ImportError, Exception):
     SUR_RASPBERRY = False
 
 app = Flask(__name__)
+
+
+def format_photo_timestamp(value, tz_name=None):
+    """Convertit une date de photo vers un format lisible en timezone locale."""
+    if not value:
+        return "Date inconnue"
+
+    value_str = str(value).strip()
+    if not value_str:
+        return "Date inconnue"
+
+    if len(value_str) == 10 and value_str.count('/') == 2:
+        return value_str
+
+    try:
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            normalized = value_str.replace(' ', 'T', 1)
+            if normalized.endswith('Z'):
+                normalized = normalized[:-1] + '+00:00'
+            dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+            try:
+                dt = datetime.strptime(value_str, fmt)
+                break
+            except ValueError:
+                continue
+        else:
+            return value_str
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    if tz_name:
+        from zoneinfo import ZoneInfo
+        dt = dt.astimezone(ZoneInfo(tz_name))
+    else:
+        dt = dt.astimezone()
+
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
+
 
 @app.route('/')
 def home():
@@ -106,7 +149,8 @@ def api_photos():
             filename = os.path.basename(event['photo_path'])
             photos.append({
                 "filename": filename,
-                "created_at": event['timestamp'],
+                "created_at": format_photo_timestamp(event['timestamp']),
+                "created_at_raw": event['timestamp'],
                 "file_size_kb": event['file_size_kb'],
                 "temp_celsius": event['temp_celsius'],
                 "water_level_ok": bool(event['water_level_ok']) if event['water_level_ok'] is not None else None
