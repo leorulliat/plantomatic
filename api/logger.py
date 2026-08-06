@@ -37,6 +37,12 @@ def enregistrer_photo_capture(chemin_photo, succes=True, erreur=None):
     else:
         logging.info(f"[CAMERA] Échec capture : {erreur}")
 
+
+def enregistrer_photo_suppression(chemin_photo):
+    """Enregistre la suppression d'une photo"""
+    logging.info(f"[CAMERA] Photo supprimée : {chemin_photo}")
+
+
 def lire_les_logs(nb_lignes=20):
     if not os.path.exists(LOG_FILE):
         return ["Aucun historique disponible."]

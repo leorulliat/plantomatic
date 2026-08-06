@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from api.meteo import recuperer_meteo_chambery
-from api.logger import lire_les_logs, enregistrer_check_2h
+from api.logger import lire_les_logs, enregistrer_check_2h, enregistrer_photo_suppression
 from config.settings import get_photo_storage_dir
 import subprocess # Pour appeler notre script de cycle proprement
 
@@ -137,6 +137,7 @@ def api_supprimer_photo(filename):
             return jsonify({"success": False, "error": "Fichier introuvable"}), 404
 
         photo_path.unlink()
+        enregistrer_photo_suppression(str(photo_path))
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
