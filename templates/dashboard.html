@@ -81,7 +81,13 @@
         .dialog-img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; transition: transform 0.1s ease-out; user-select: none; pointer-events: none; }
         .dialog-zoom-bar { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; font-size: 12px; }
         .dialog-zoom-bar input[type="range"] { flex: 1; accent-color: #34c759; cursor: pointer; }
-        .dialog-carousel-nav { display: flex; justify-content: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; }
+.dialog-carousel-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 15px; background: #2c2c2e; border-top: 1px solid #3a3a3c; }
+            .dialog-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #eaeaea; min-width: 120px; justify-content: center; }
+            .dialog-status span { font-weight: bold; }
+            .dialog-status .text-ok { color: #24b147; }
+            .dialog-status .text-danger { color: #ff3b30; }
+            .dialog-status-left { justify-content: flex-start; }
+            .dialog-status-right { justify-content: flex-end; }
         .reset-btn { background: #3a3a3c; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
         .reset-btn:hover { background: #48484a; }
     </style>
@@ -262,15 +268,19 @@
 
             title.innerText = photo.created_at ? photo.created_at : "Date inconnue";
             title.title = photo.filename;
-            const niveauText = photo.water_level_ok === null
-                ? 'État eau : inconnu'
+            const waterStatus = document.getElementById('dialog-water-status');
+            const tempStatus = document.getElementById('dialog-temp-status');
+            const levelText = photo.water_level_ok === null
+                ? 'Inconnu'
                 : photo.water_level_ok
-                    ? 'Réservoir : plein'
-                    : 'Réservoir : vide';
-            const tempText = photo.temp_celsius === null
-                ? 'Température : inconnue'
-                : `Température : ${photo.temp_celsius}°C`;
-            meta.innerText = `${photo.filename} · ${tempText} · ${niveauText}`;
+                    ? 'Plein'
+                    : 'Vide';
+            const levelClass = photo.water_level_ok === false ? 'text-danger' : 'text-ok';
+            waterStatus.innerHTML = `💧 <span class="${levelClass}">Réservoir ${levelText}</span>`;
+            tempStatus.innerHTML = photo.temp_celsius === null
+                ? '☀️ <span>Température inconnue</span>'
+                : `☀️ <span>${photo.temp_celsius}°C</span>`;
+            meta.innerText = photo.filename;
             download.href = `/photos/${photo.filename}`;
             img.src = `/photos/${photo.filename}`;
             img.style.display = "block";
@@ -465,8 +475,10 @@
                 <button class="dialog-btn reset-btn" onclick="resetZoom()">Reset</button>
             </div>
             <div class="dialog-carousel-nav">
+                <div id="dialog-water-status" class="dialog-status dialog-status-left">💧 <span class="text-ok">Réservoir OK</span></div>
                 <button id="dialog-prev" class="dialog-btn dialog-nav" onclick="afficherPhotoPrecedente()" title="Photo précédente">◀</button>
                 <button id="dialog-next" class="dialog-btn dialog-nav" onclick="afficherPhotoSuivante()" title="Photo suivante">▶</button>
+                <div id="dialog-temp-status" class="dialog-status dialog-status-right">☀️ <span>--°C</span></div>
             </div>
         </div>
     </div>
